@@ -1,6 +1,6 @@
-#ifndef PIUIO_PICO_PIUIO_CONFIG_H
-#define PIUIO_PICO_PIUIO_CONFIG_H
-#include "piuio_ws2812_helpers.h"
+#ifndef TRUE_LXIO_PICO_PIUIO_CONFIG_H
+#define TRUE_LXIO_PICO_PIUIO_CONFIG_H
+#include "true_lxio_ws2812_helpers.h"
 
 // Uncomment these defines to enable WS2812 LED support.
 //#define ENABLE_WS2812_SUPPORT
@@ -47,4 +47,7 @@ static const uint8_t pinLED[10] = {
         5       // P2 DR
 };
 
-#endif //PIUIO_PICO_PIUIO_CONFIG_H
+// Map this to the switch to change between PIUIO and LXIO
+static const uint8_t pinswitchlxio = 26;
+
+#endif //TRUE_LXIO_PICO_PIUIO_CONFIG_H

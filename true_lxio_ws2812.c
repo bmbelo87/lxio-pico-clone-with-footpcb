@@ -1,9 +1,9 @@
 
-#include "piuio_config.h"
+#include "true_lxio_config.h"
 
 #ifdef ENABLE_WS2812_SUPPORT
-#include "piuio_ws2812.h"
-#include "piuio_ws2812_helpers.h"
+#include "true_lxio_ws2812.h"
+#include "true_lxio_ws2812_helpers.h"
 
 #include "ws2812.pio.h"
 #include "pico/multicore.h"

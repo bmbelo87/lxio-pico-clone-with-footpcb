@@ -1,5 +1,5 @@
-#ifndef PIUIO_PICO_PIUIO_WS2812_HELPERS_H
-#define PIUIO_PICO_PIUIO_WS2812_HELPERS_H
+#ifndef TRUE_LXIO_PICO_PIUIO_WS2812_HELPERS_H
+#define TRUE_LXIO_PICO_PIUIO_WS2812_HELPERS_H
 
 #include <stdint.h>
 #include "hardware/pio.h"
@@ -13,4 +13,4 @@ static inline void put_pixel(uint32_t pixel_grb) {
                           (uint32_t) (b)
 
 
-#endif //PIUIO_PICO_PIUIO_WS2812_HELPERS_H
+#endif //TRUE_LXIO_PICO_PIUIO_WS2812_HELPERS_H

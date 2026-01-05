@@ -1,8 +1,11 @@
-# PIUIO-PICO
+# True LXIO-PICO
 
-This is a Pump it Up IO board (PIUIO) clone based on the Raspberry Pi Pico microcontroller.
+This is a Pump it Up IO board (PIUIO/LXIO) clone based on the Raspberry Pi Pico microcontroller.
 
-Though designed for [dj505's PicoFX handpump controller](https://github.com/dj505/PicoFX), this will work with DIY hand pump controller builds, and can probably be adapted for pad use, too.
+The build is aimed to switch the PIUIO and the LXIOv1/2 by the pusing of a button.
+
+The original [piuio-pico](https://github.com/48productions/piuio-pico) is originally designed for [dj505's PicoFX handpump controller](https://github.com/dj505/PicoFX).
+This repository will continue the original design, only changing the protocol and descriptors.
 
 ## Hardware Setup
 You don't need many components to put one together:
@@ -19,11 +22,30 @@ By default the pins are configured as shown below, but the pins can be changed i
 General overview:
  - Add the SDK via your method of choice (see the pico-sdk repo)
  - Run `git submodule update --init` inside the SDK directory to set up the other required libraries (namely tinyusb)
- - Create the "build" folder inside the "piuio-pico" folder.
+ - Create the "build" folder inside the "true-lxio-pico" folder.
  - Inside the build folder, run `cmake ..`, then run `make`. You'll get a .UF2 file in the build folder that you can upload to the Pico!
  - With the Pico unplugged from the PC, hold the "BOOTSEL" button on the Pico, then plug in the Pico.
  - The Pico will now show up as a "flash drive" in your OS. Copy the .UF2 file onto the Pico, and the code will be uploaded!
 
+The setup can be executed like the following:
+```bash
+# In ubuntu, install these
+sudo apt install gcc-arm-none-eabi
+# The setup
+git clone https://github.com/raspberrypi/pico-sdk.git
+git clone https://github.com/ckdur/true-lxio-pico.git
+export PICO_SDK_PATH=$PWD/pico-sdk
+(cd $PICO_SDK_PATH && git submodule update --init)
+mkdir -p true-lxio-pico/build
+(cd true-lxio-pico/build && cmake .. -DPICO_SDK_PATH=$PICO_SDK_PATH)
+make -C true-lxio-pico/build
+# Plugin the pico device with BOOTSEL pressed,
+# then copy the .UF2 file into the flash device
+cp true-lxio-pico/build/true_lxio_pico.uf2 /media/$USER/RPI-RP2
+# Test
+sudo lsusb -d 0d2f:1020 -v
+sudo lsusb -d 0547:1002 -v
+```
 
 ## PIU Online Notice
 Using a hand controller with games connected to the official Pump it Up online service is considered cheating by Andamiro and may lead to actions being taken against your account.
@@ -31,6 +53,9 @@ As such, this use case is not officially endorsed by piuio-pico.
 
 
 ## Credits
+Credit to [piuio-pico](https://github.com/48productions/piuio-pico) and [dj505's PicoFX handpump controller](https://github.com/dj505/PicoFX).
+MIT license is preserved, and modified with the other author.
+
 This project is based off of the [tinyusb device USB examples](https://github.com/hathach/tinyusb/tree/master/examples/device) (specifically webusb_serial and hid_generic_input)
 
 Protocol information from the [PIUIO_Arduino](https://github.com/ckdur/PIUIO_Arduino/) and [piuio_clone](https://github.com/racerxdl/piuio_clone/) repositories.

@@ -34,4 +34,6 @@ enum
     REPORT_ID_COUNT
 };
 
+extern int piuio_which_device;
+
 #endif /* USB_DESCRIPTORS_H_ */

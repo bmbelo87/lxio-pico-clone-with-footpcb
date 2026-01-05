@@ -1,5 +1,5 @@
-#ifndef PIUIO_PICO_PIUIO_STRUCTS_H
-#define PIUIO_PICO_PIUIO_STRUCTS_H
+#ifndef TRUE_LXIO_PICO_PIUIO_STRUCTS_H
+#define TRUE_LXIO_PICO_PIUIO_STRUCTS_H
 
 enum state {
     PLAYER_1,
@@ -48,4 +48,4 @@ struct lampArray {
     };
 };
 
-#endif //PIUIO_PICO_PIUIO_STRUCTS_H
+#endif //TRUE_LXIO_PICO_PIUIO_STRUCTS_H
