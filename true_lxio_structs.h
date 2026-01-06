@@ -24,7 +24,9 @@ struct lampArray {
             // p1 cmd byte 1
             uint8_t empty2 : 2;
             uint8_t bass_light : 1;
-            uint8_t empty3 : 5;
+            uint8_t empty3 : 3;
+            uint8_t report : 1;
+            uint8_t empty4 : 1;
 
             // p2 cmd byte 2
             uint8_t p2_mux : 2;
@@ -39,7 +41,9 @@ struct lampArray {
             uint8_t r1_halo : 1;
             uint8_t l2_halo : 1;
             uint8_t l1_halo : 1;
-            uint8_t empty5 : 3;
+            uint8_t counter1 : 1;
+            uint8_t counter2 : 1;
+            uint8_t empty5 : 1;
             uint8_t r1_halo_dupe : 1;
             uint8_t r2_halo_dupe : 1;
 
