@@ -192,18 +192,20 @@ void piuio_task(void) {
     for (int i = 0; i < 5; i++) {
         uint8_t* p1 = &inputData[PLAYER_1];
         uint8_t* p2 = &inputData[PLAYER_2];
-        *p1 = gpio_get(pinSwitch[i]) ? tu_bit_set(*p1, pos[i]) : tu_bit_clear(*p1, pos[i]);
-        *p2 = gpio_get(pinSwitch[i+5]) ? tu_bit_set(*p2, pos[i]) : tu_bit_clear(*p2, pos[i]);
+        if(pinSwitch[i] != 255) *p1 = gpio_get(pinSwitch[i]) ? tu_bit_set(*p1, pos[i]) : tu_bit_clear(*p1, pos[i]);
+        if(pinSwitch[i+5] != 255) *p2 = gpio_get(pinSwitch[i+5]) ? tu_bit_set(*p2, pos[i]) : tu_bit_clear(*p2, pos[i]);
     }
 
     // Test/Service buttons
-    inputData[CABINET] = gpio_get(pinSwitch[10]) ? tu_bit_set(inputData[1], 1) : tu_bit_clear(inputData[1], 1);
-    inputData[CABINET] = gpio_get(pinSwitch[11]) ? tu_bit_set(inputData[1], 6) : tu_bit_clear(inputData[1], 6);
+    if(pinSwitch[10] != 255) inputData[CABINET] = gpio_get(pinSwitch[10]) ? tu_bit_set(inputData[1], 1) : tu_bit_clear(inputData[1], 1);
+    if(pinSwitch[11] != 255) inputData[CABINET] = gpio_get(pinSwitch[11]) ? tu_bit_set(inputData[1], 6) : tu_bit_clear(inputData[1], 6);
+    if(pinSwitch[12] != 255) inputData[CABINET] = gpio_get(pinSwitch[12]) ? tu_bit_set(inputData[1], 1) : tu_bit_clear(inputData[1], 2);
+    if(pinSwitch[13] != 255) inputData[CABINET] = gpio_get(pinSwitch[13]) ? tu_bit_set(inputData[1], 6) : tu_bit_clear(inputData[3], 2);
 
     // Write pad lamps
     for (int i = 0; i < 5; i++) {
-        gpio_put(pinLED[i], tu_bit_test(lamp.data[PLAYER_1], pos[i] + 2));
-        gpio_put(pinLED[i+5], tu_bit_test(lamp.data[PLAYER_2], pos[i] + 2));
+        if(pinLED[i] != 255) gpio_put(pinLED[i], tu_bit_test(lamp.data[PLAYER_1], pos[i] + 2));
+        if(pinLED[i+5] != 255) gpio_put(pinLED[i+5], tu_bit_test(lamp.data[PLAYER_2], pos[i] + 2));
     }
 
     // This has a debouncer
@@ -223,7 +225,7 @@ void piuio_task(void) {
     prev_switch_state = cur_switch_state;
 
     // Write the bass neon to the onboard LED for testing + kicks
-    gpio_put(25, lamp.bass_light | switch_notif);
+    gpio_put(pinled, lamp.bass_light | switch_notif);
 
     #ifdef ENABLE_WS2812_SUPPORT
     ws2812_unlock_mtx();
@@ -244,7 +246,7 @@ int main(void) {
     #endif
 
     // Set up GPIO pins: Inputs first, then outputs
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < (sizeof(pinSwitch)/sizeof(pinSwitch[0])); i++) if(pinSwitch[i] != 255) {
         gpio_init(pinSwitch[i]);
         gpio_set_dir(pinSwitch[i], false);
         gpio_pull_up(pinSwitch[i]);
@@ -260,7 +262,7 @@ int main(void) {
     }
     prev_switch_state = prev_switch == 0xF?1:0;
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < (sizeof(pinLED)/sizeof(pinLED[0])); i++) if(pinLED[i] != 255) {
         gpio_init(pinLED[i]);
         gpio_set_dir(pinLED[i], true);
     }

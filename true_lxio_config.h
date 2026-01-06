@@ -18,7 +18,7 @@ static uint32_t ws2812_color[5] = {
 
 // Modify these arrays to edit the pin out.
 // Map these according to your button pins.
-static const uint8_t pinSwitch[12] = {
+static const uint8_t pinSwitch[14] = {
         19,     // P1 DL
         21,     // P1 UL
         10,     // P1 CN
@@ -29,8 +29,10 @@ static const uint8_t pinSwitch[12] = {
         2,      // P2 CN
         0,      // P2 UR
         4,      // P2 DR
-        15,    // Service
-        14     // Test
+        15,     // Service
+        14,     // Test
+        255,    // Coin 1
+        255     // Coin 2
 };
 
 // Map these according to your LED pins.
