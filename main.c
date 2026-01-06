@@ -199,8 +199,8 @@ void piuio_task(void) {
     // Test/Service buttons
     if(pinSwitch[10] != 255) inputData[CABINET] = gpio_get(pinSwitch[10]) ? tu_bit_set(inputData[1], 1) : tu_bit_clear(inputData[1], 1);
     if(pinSwitch[11] != 255) inputData[CABINET] = gpio_get(pinSwitch[11]) ? tu_bit_set(inputData[1], 6) : tu_bit_clear(inputData[1], 6);
-    if(pinSwitch[12] != 255) inputData[CABINET] = gpio_get(pinSwitch[12]) ? tu_bit_set(inputData[1], 1) : tu_bit_clear(inputData[1], 2);
-    if(pinSwitch[13] != 255) inputData[CABINET] = gpio_get(pinSwitch[13]) ? tu_bit_set(inputData[1], 6) : tu_bit_clear(inputData[3], 2);
+    if(pinSwitch[12] != 255) inputData[CABINET] = gpio_get(pinSwitch[12]) ? tu_bit_set(inputData[1], 2) : tu_bit_clear(inputData[1], 2);
+    if(pinSwitch[13] != 255) inputData[CABINET] = gpio_get(pinSwitch[13]) ? tu_bit_set(inputData[3], 2) : tu_bit_clear(inputData[3], 2);
 
     // Write pad lamps
     for (int i = 0; i < 5; i++) {
@@ -225,7 +225,7 @@ void piuio_task(void) {
     prev_switch_state = cur_switch_state;
 
     // Write the bass neon to the onboard LED for testing + kicks
-    gpio_put(pinled, lamp.bass_light | switch_notif);
+    gpio_put(pinled, lamp.counter2 | switch_notif);
 
     #ifdef ENABLE_WS2812_SUPPORT
     ws2812_unlock_mtx();
