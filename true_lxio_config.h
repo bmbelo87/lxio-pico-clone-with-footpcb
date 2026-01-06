@@ -48,6 +48,7 @@ static const uint8_t pinLED[10] = {
 };
 
 // Map this to the switch to change between PIUIO and LXIO
-static const uint8_t pinswitchlxio = 26;
+static const uint8_t pinswitchlxio = 28;
+static const uint8_t pinled = 25;
 
 #endif //TRUE_LXIO_PICO_PIUIO_CONFIG_H

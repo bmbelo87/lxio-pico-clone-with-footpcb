@@ -6,10 +6,44 @@
 #include "true_lxio_structs.h"
 #include "true_lxio_config.h"
 #include "usb_descriptors.h"
+#include "hardware/flash.h"
+#include "hardware/sync.h"
 
 #ifdef ENABLE_WS2812_SUPPORT
 #include "true_lxio_ws2812.h"
 #endif
+
+#define FLASH_TARGET_OFFSET (512 * 1024) // choosing to start at 512K
+
+// From https://forums.raspberrypi.com/viewtopic.php?t=310821
+struct MyData {
+    int which;
+};
+
+struct MyData myData;
+
+void saveMyData() {
+    uint8_t* myDataAsBytes = (uint8_t*) &myData;
+    int myDataSize = sizeof(myData);
+    
+    int writeSize = (myDataSize / FLASH_PAGE_SIZE) + 1; // how many flash pages we're gonna need to write
+    int sectorCount = ((writeSize * FLASH_PAGE_SIZE) / FLASH_SECTOR_SIZE) + 1; // how many flash sectors we're gonna need to erase
+        
+    printf("Programming flash target region...\n");
+
+    uint32_t interrupts = save_and_disable_interrupts();
+    flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE * sectorCount);
+    flash_range_program(FLASH_TARGET_OFFSET, myDataAsBytes, FLASH_PAGE_SIZE * writeSize);
+    restore_interrupts(interrupts);
+
+    printf("Done.\n");
+}
+
+void readBackMyData() {
+    const uint8_t* flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
+    memcpy(&myData, flash_target_contents, sizeof(myData));
+}
+
 
 const uint8_t pos[] = { 3, 0, 2, 1, 4 }; // don't touch this
 
@@ -124,6 +158,18 @@ uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t
     return reqlen;
 }
 
+static int next_device = 0;
+static int prev_switch;
+static int prev_switch_state;
+static int switch_notif = 0;
+
+void go_next_device(void) {
+    next_device++;
+    if(next_device >= 3) next_device = 0;
+    myData.which = next_device;
+    saveMyData();
+}
+
 void piuio_task(void) {
     #ifdef ENABLE_WS2812_SUPPORT
     ws2812_lock_mtx();
@@ -147,8 +193,24 @@ void piuio_task(void) {
         gpio_put(pinLED[i+5], tu_bit_test(lamp.data[PLAYER_2], pos[i] + 2));
     }
 
+    // This has a debouncer
+    prev_switch = prev_switch << 1;
+    prev_switch |= gpio_get(pinswitchlxio)?1:0;
+    prev_switch &= 0xF;
+    int cur_switch_state = prev_switch_state;
+    if(prev_switch == 0xF) cur_switch_state = 1;
+    else if(prev_switch == 0x0) cur_switch_state = 0;
+    if(prev_switch_state != cur_switch_state && !cur_switch_state) {
+        go_next_device();
+        switch_notif = 1;
+    }
+    if(prev_switch_state != cur_switch_state && cur_switch_state) {
+        switch_notif = 0;
+    }
+    prev_switch_state = cur_switch_state;
+
     // Write the bass neon to the onboard LED for testing + kicks
-    gpio_put(25, lamp.bass_light);
+    gpio_put(25, lamp.bass_light | switch_notif);
 
     #ifdef ENABLE_WS2812_SUPPORT
     ws2812_unlock_mtx();
@@ -157,6 +219,11 @@ void piuio_task(void) {
 
 int main(void) {
     board_init();
+    readBackMyData();
+
+    piuio_which_device = (int)myData.which;
+    if(piuio_which_device < 0 || piuio_which_device > 2) piuio_which_device = 1;
+    next_device = piuio_which_device;
 
     // Init WS2812B
     #ifdef ENABLE_WS2812_SUPPORT
@@ -169,19 +236,24 @@ int main(void) {
         gpio_set_dir(pinSwitch[i], false);
         gpio_pull_up(pinSwitch[i]);
     }
-    
+
     gpio_init(pinswitchlxio);
     gpio_set_dir(pinswitchlxio, false);
     gpio_pull_up(pinswitchlxio);
 
-    if(gpio_get(pinswitchlxio)) {
-        piuio_which_device = 0; // Switch back to PIUIO if pressed
+    prev_switch = gpio_get(pinswitchlxio)?1:0;
+    for(int i = 1; i < 4; i++) {
+        prev_switch |= (prev_switch & 1) << i;
     }
+    prev_switch_state = prev_switch == 0xF?1:0;
 
     for (int i = 0; i < 10; i++) {
         gpio_init(pinLED[i]);
         gpio_set_dir(pinLED[i], true);
     }
+
+    gpio_init(pinled);
+    gpio_set_dir(pinled, true);
 
     // init device stack on configured roothub port
     tud_init(BOARD_TUD_RHPORT);

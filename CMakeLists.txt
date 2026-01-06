@@ -32,7 +32,8 @@ target_link_libraries(true_lxio_pico
                       tinyusb_device
                       hardware_pio
                       hardware_dma
-                      hardware_irq)
+                      hardware_irq
+                      hardware_flash)
 
 # Uncomment this line to enable fix for Errata RP2040-E5 (the fix requires use of GPIO 15)
 #target_compile_definitions(true_lxio_pico PUBLIC PICO_RP2040_USB_DEVICE_ENUMERATION_FIX=1)
