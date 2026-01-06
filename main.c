@@ -225,7 +225,7 @@ void piuio_task(void) {
     prev_switch_state = cur_switch_state;
 
     // Write the bass neon to the onboard LED for testing + kicks
-    gpio_put(pinled, lamp.counter2 | switch_notif);
+    gpio_put(pinled, lamp.bass_light | switch_notif);
 
     #ifdef ENABLE_WS2812_SUPPORT
     ws2812_unlock_mtx();
