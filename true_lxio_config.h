@@ -29,8 +29,8 @@ static const uint8_t pinSwitch[14] = {
         2,      // P2 CN
         0,      // P2 UR
         4,      // P2 DR
-        14,     // Service
-        15,     // Test
+        15,     // Service
+        14,     // Test
         255,    // Coin1
         255     // Coin2
 };
