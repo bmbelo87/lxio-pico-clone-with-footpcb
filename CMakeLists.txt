@@ -14,6 +14,7 @@ target_sources(true_lxio_pico PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/main.c
         ${CMAKE_CURRENT_LIST_DIR}/true_lxio_ws2812.c
         ${CMAKE_CURRENT_LIST_DIR}/usb_descriptors.c
+        ${CMAKE_CURRENT_LIST_DIR}/other_drivers.c
         )
 
 # Make sure TinyUSB can find tusb_config.h

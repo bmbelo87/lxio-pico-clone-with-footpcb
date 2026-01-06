@@ -95,11 +95,21 @@ extern "C" {
 #endif
 
 //------------- CLASS -------------//
+
+// We turn off outside the "other_drivers.c" to get the built-in drivers as custom drivers
+#ifndef PIUIO_PICO_DEF_CLASS
 #define CFG_TUD_CDC               0
 #define CFG_TUD_MSC               0
-#define CFG_TUD_HID               1
+#define CFG_TUD_HID               0
 #define CFG_TUD_MIDI              0
-#define CFG_TUD_VENDOR            1
+#define CFG_TUD_VENDOR            0
+#else
+#define CFG_TUD_CDC               0
+#define CFG_TUD_MSC               0
+#define CFG_TUD_HID               1  // NOTE: We make it custom
+#define CFG_TUD_MIDI              0
+#define CFG_TUD_VENDOR            1  // NOTE: We make it custom
+#endif
 
 // Vendor FIFO size of TX and RX
 // If not configured vendor endpoints will not be buffered

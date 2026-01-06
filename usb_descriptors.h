@@ -36,4 +36,7 @@ enum
 
 extern int piuio_which_device;
 
+#define EPNUM_VENDOR_IN_LXIO 0x01
+#define EPNUM_VENDOR_OUT_LXIO 0x02
+
 #endif /* USB_DESCRIPTORS_H_ */

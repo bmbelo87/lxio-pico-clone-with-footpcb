@@ -8,6 +8,7 @@
 #include "usb_descriptors.h"
 #include "hardware/flash.h"
 #include "hardware/sync.h"
+#include "class/hid/hid.h"
 
 #ifdef ENABLE_WS2812_SUPPORT
 #include "true_lxio_ws2812.h"
@@ -126,7 +127,7 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint16_
 
     // Get the LX data
     len = len > 16 ? 16 : len;
-    memcpy(LXLampData, report, len);
+    memcpy(report, LXInputData, len);
     handle_lxio_data();
 }
 
@@ -157,6 +158,18 @@ uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t
     memcpy(buffer, LXInputData, reqlen);
     return reqlen;
 }
+
+void hid_task(void) {
+  if(piuio_which_device == 0) return; // Dont do this on PIUIO
+  // Just do the sendings
+
+  if ( tud_hid_n_ready(0) )
+  {
+    handle_lxio_data();
+    tud_hid_n_report(0, 0, LXInputData, 16);
+  }
+}
+
 
 static int next_device = 0;
 static int prev_switch;
@@ -256,12 +269,17 @@ int main(void) {
     gpio_set_dir(pinled, true);
 
     // init device stack on configured roothub port
-    tud_init(BOARD_TUD_RHPORT);
+    const tusb_rhport_init_t rh_init = {
+        .role = TUSB_ROLE_DEVICE,
+        .speed = TUD_OPT_HIGH_SPEED ? TUSB_SPEED_HIGH : TUSB_SPEED_FULL
+    };
+    tud_rhport_init(BOARD_TUD_RHPORT, &rh_init);
 
     // Main loop
     while (true) {
         tud_task(); // tinyusb device task
         piuio_task();
+        hid_task();
     }
 
     return 0;

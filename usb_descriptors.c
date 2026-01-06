@@ -25,6 +25,11 @@
 
 #include "tusb.h"
 #include "usb_descriptors.h"
+#include "class/hid/hid.h"
+#include "class/hid/hid_device.h"
+#include "class/vendor/vendor_device.h"
+#include "device/usbd_pvt.h"
+
 
 /* A combination of interfaces must have a unique product id, since PC will save device driver after the first plug.
  * Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause system error on PC.
@@ -140,9 +145,6 @@ enum
 #define EPNUM_VENDOR_IN_PIUIO 0x01
 #define EPNUM_VENDOR_OUT_PIUIO 0x01
 
-#define EPNUM_VENDOR_IN_LXIO 0x01
-#define EPNUM_VENDOR_OUT_LXIO 0x02
-
 uint8_t const desc_configuration_piuio[] =
 {
     // Config number, interface count, string index, total length, attribute, power in mA
@@ -174,8 +176,41 @@ uint8_t const desc_configuration_lxio[] = {
 
     // HID Input & Output descriptor
     // Interface number, string index, protocol, report descriptor len, EP OUT & IN address, size & polling interval
-    TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_VENDOR, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report_lxio), 0x80 | EPNUM_VENDOR_IN_LXIO, EPNUM_VENDOR_OUT_LXIO, 16, 1)
+    TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_VENDOR, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report_lxio), EPNUM_VENDOR_OUT_LXIO, 0x80 | EPNUM_VENDOR_IN_LXIO, 16, 1)
 };
+
+const usbd_class_driver_t _piuio_driver[] = {
+    {
+        .name             = "VENDOR",
+        .init             = vendord_init,
+        .deinit           = vendord_deinit,
+        .reset            = vendord_reset,
+        .open             = vendord_open,
+        .control_xfer_cb  = tud_vendor_control_xfer_cb,
+        .xfer_cb          = vendord_xfer_cb,
+        .sof              = NULL
+    }
+};
+
+const usbd_class_driver_t _lxio_driver[] = {
+    {
+        .name             = "HID",
+        .init             = hidd_init,
+        .deinit           = hidd_deinit,
+        .reset            = hidd_reset,
+        .open             = hidd_open,
+        .control_xfer_cb  = hidd_control_xfer_cb,
+        .xfer_cb          = hidd_xfer_cb,
+        .sof              = NULL
+    }
+};
+
+// Implement callback to add our custom driver
+usbd_class_driver_t const *usbd_app_driver_get_cb(uint8_t *driver_count) {
+    *driver_count = 1;
+    if(piuio_which_device == 0) return &_piuio_driver;
+    else return &_lxio_driver;
+}
 
 const uint8_t * const desc_configurations[] = {
     &desc_configuration_piuio,
