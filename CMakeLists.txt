@@ -5,6 +5,9 @@ include(pico_sdk_import.cmake)
 
 project(true_lxio_pico)
 
+option(ENABLE_WS2812_SUPPORT "Enable WS2812 LED support" ON)
+option(WS2812_IS_RGBW "Enable WS2812 for RGBW" OFF)
+
 pico_sdk_init()
 
 add_executable(true_lxio_pico
@@ -35,6 +38,14 @@ target_link_libraries(true_lxio_pico
                       hardware_dma
                       hardware_irq
                       hardware_flash)
+
+if(ENABLE_WS2812_SUPPORT)
+    target_compile_definitions(true_lxio_pico PRIVATE ENABLE_WS2812_SUPPORT=1)
+endif()
+
+if(WS2812_IS_RGBW)
+    target_compile_definitions(true_lxio_pico PRIVATE WS2812_IS_RGBW=true)
+endif()
 
 # Uncomment this line to enable fix for Errata RP2040-E5 (the fix requires use of GPIO 15)
 #target_compile_definitions(true_lxio_pico PUBLIC PICO_RP2040_USB_DEVICE_ENUMERATION_FIX=1)

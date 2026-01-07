@@ -2,10 +2,17 @@
 #define TRUE_LXIO_PICO_PIUIO_CONFIG_H
 #include "true_lxio_ws2812_helpers.h"
 
-// Uncomment these defines to enable WS2812 LED support.
+// Enable this into the cmake
 //#define ENABLE_WS2812_SUPPORT
-//#define WS2812_IS_RGBW false
-//#define WS2812_PIN 22
+
+#ifdef ENABLE_WS2812_SUPPORT
+#ifndef WS2812_IS_RGBW
+#define WS2812_IS_RGBW false
+#endif
+#ifndef WS2812_PIN
+#define WS2812_PIN 22
+#endif
+#endif
 
 // Modify these to edit the colors of the cabinet lamps.
 static uint32_t ws2812_color[5] = {

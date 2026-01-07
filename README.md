@@ -37,7 +37,7 @@ git clone https://github.com/ckdur/true-lxio-pico.git
 export PICO_SDK_PATH=$PWD/pico-sdk
 (cd $PICO_SDK_PATH && git submodule update --init)
 mkdir -p true-lxio-pico/build
-(cd true-lxio-pico/build && cmake .. -DPICO_SDK_PATH=$PICO_SDK_PATH)
+(cd true-lxio-pico/build && cmake .. -DPICO_SDK_PATH=$PICO_SDK_PATH -DENABLE_WS2812_SUPPORT=ON)
 make -C true-lxio-pico/build
 # Plugin the pico device with BOOTSEL pressed,
 # then copy the .UF2 file into the flash device
