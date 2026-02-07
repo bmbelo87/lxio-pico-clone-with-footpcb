@@ -17,7 +17,7 @@ void ws2812_update() {
     // Write lamp.data to WS2812Bs
     put_pixel(lamp->l1_halo ? ws2812_color[0] : urgb_u32(0, 0, 0));
     put_pixel(lamp->l2_halo ? ws2812_color[1] : urgb_u32(0, 0, 0));
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 2; i++)
         put_pixel(lamp->bass_light ? ws2812_color[2] : urgb_u32(0, 0, 0));
     put_pixel(lamp->r2_halo ? ws2812_color[3] : urgb_u32(0, 0, 0));
     put_pixel(lamp->r1_halo ? ws2812_color[4] : urgb_u32(0, 0, 0));
