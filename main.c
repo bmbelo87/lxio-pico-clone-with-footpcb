@@ -91,6 +91,8 @@ void handle_lxio_data() {
     // Do the conversion from the Lights and Input from regular IO
     // to the LX Lights and Input format
     // NOTE: Note that InputData will carry the 4 sensor anyways
+//#define PIUIO_BUTTON
+#ifndef PIUIO_BUTTON
     LXInputData[0] = inputData[0];
     LXInputData[1] = inputData[0];
     LXInputData[2] = inputData[0];
@@ -101,10 +103,26 @@ void handle_lxio_data() {
     LXInputData[7] = inputData[2];
     LXInputData[8] = inputData[1];
     LXInputData[9] = inputData[3];
-    LXInputData[10] = 0xFF; // TODO: We do not have a handler for the front buttons
-    LXInputData[11] = 0xFF; // TODO: We do not have a handler for the front buttons
+    LXInputData[10] = 0xFF;
+    LXInputData[11] = 0xFF;
     LXInputData[14] = 0xFF;
     LXInputData[15] = 0xFF;
+#else
+    LXInputData[0] = 0xFF;
+    LXInputData[1] = 0xFF;
+    LXInputData[2] = 0xFF;
+    LXInputData[3] = 0xFF;
+    LXInputData[4] = 0xFF;
+    LXInputData[5] = 0xFF;
+    LXInputData[6] = 0xFF;
+    LXInputData[7] = 0xFF;
+    LXInputData[8] = inputData[1];
+    LXInputData[9] = inputData[3];
+    LXInputData[10] = inputData[0];
+    LXInputData[11] = inputData[2];
+    LXInputData[14] = 0xFF;
+    LXInputData[15] = 0xFF;
+#endif
 
     memcpy(lamp.data, LXLampData, 8); // Just copy in the case of lamps
 }
