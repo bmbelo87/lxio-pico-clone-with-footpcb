@@ -209,15 +209,18 @@ static absolute_time_t last_inactive_demo;
 static int inactive_index = 0;
 
 const uint8_t inactiveLamps [] = {
-    0x03, 0x03,
+    0x01, 0x01,
+    0x02, 0x02,
     0x04, 0x04,
-    0x18, 0x18,
+    0x08, 0x08,
+    0x10, 0x10,
     0x00, 0x00,
-    0x03, 0x03,
+    0x02, 0x02,
+    0x01, 0x01,
     0x04, 0x04,
-    0x18, 0x18,
+    0x10, 0x10,
+    0x08, 0x08,
     0x00, 0x00,
-    0x1F, 0x1F,
     0x1F, 0x1F,
     0x1F, 0x1F,
     0x00, 0x00,
@@ -287,7 +290,7 @@ void piuio_task(void) {
         inactive = 0;
         inactive_index = 0;
     }
-    else if(absolute_time_diff_us(last_frame_time, now) >= 5000000 && !inactive) {
+    else if(absolute_time_diff_us(last_frame_time, now) >= 10000000 && !inactive) {
         inactive = 1;
         last_inactive_demo = now;
     }
