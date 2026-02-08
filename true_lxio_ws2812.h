@@ -7,4 +7,6 @@ void ws2812_init(struct lampArray* l);
 void ws2812_lock_mtx();
 void ws2812_unlock_mtx();
 
+extern unsigned char inactive;
+
 #endif //TRUE_LXIO_PICO_PIUIO_WS2812_H

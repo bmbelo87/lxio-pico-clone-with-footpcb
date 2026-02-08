@@ -9,6 +9,7 @@
 #include "hardware/flash.h"
 #include "hardware/sync.h"
 #include "class/hid/hid.h"
+#include "class/hid/hid_device.h"
 
 #ifdef ENABLE_WS2812_SUPPORT
 #include "true_lxio_ws2812.h"
@@ -145,7 +146,7 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint16_
 
     // Get the LX data
     len = len > 16 ? 16 : len;
-    memcpy(report, LXInputData, len);
+    //memcpy(report, LXInputData, len);
     handle_lxio_data();
 }
 
@@ -201,10 +202,32 @@ void go_next_device(void) {
     saveMyData();
 }
 
+static struct lampArray prevLamp = {};
+static uint8_t prevInputData [] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+static absolute_time_t last_frame_time;
+static absolute_time_t last_inactive_demo;
+static int inactive_index = 0;
+
+const uint8_t inactiveLamps [] = {
+    0x03, 0x03,
+    0x04, 0x04,
+    0x18, 0x18,
+    0x00, 0x00,
+    0x03, 0x03,
+    0x04, 0x04,
+    0x18, 0x18,
+    0x00, 0x00,
+    0x1F, 0x1F,
+    0x1F, 0x1F,
+    0x1F, 0x1F,
+    0x00, 0x00,
+};
+
 void piuio_task(void) {
     #ifdef ENABLE_WS2812_SUPPORT
     ws2812_lock_mtx();
     #endif
+    absolute_time_t now = get_absolute_time();
 
     // P1 / P2 inputs
     for (int i = 0; i < 5; i++) {
@@ -221,9 +244,22 @@ void piuio_task(void) {
     if(pinSwitch[13] != 255) inputData[CABINET] = gpio_get(pinSwitch[13]) ? tu_bit_set(inputData[3], 2) : tu_bit_clear(inputData[3], 2);
 
     // Write pad lamps
-    for (int i = 0; i < 5; i++) {
-        if(pinLED[i] != 255) gpio_put(pinLED[i], tu_bit_test(lamp.data[PLAYER_1], pos[i] + 2));
-        if(pinLED[i+5] != 255) gpio_put(pinLED[i+5], tu_bit_test(lamp.data[PLAYER_2], pos[i] + 2));
+    if(inactive) {
+        if(absolute_time_diff_us(last_inactive_demo, now) >= 250000) {
+            inactive_index+=2;
+            if(inactive_index >= (sizeof(inactiveLamps)/sizeof(uint8_t))) inactive_index=0;
+            last_inactive_demo = now;
+        }
+        for (int i = 0; i < 5; i++) {
+            if(pinLED[i] != 255) gpio_put(pinLED[i], tu_bit_test(inactiveLamps[inactive_index], pos[i]));
+            if(pinLED[i+5] != 255) gpio_put(pinLED[i+5], tu_bit_test(inactiveLamps[inactive_index+1], pos[i]));
+        }
+    }
+    else {
+        for (int i = 0; i < 5; i++) {
+            if(pinLED[i] != 255) gpio_put(pinLED[i], tu_bit_test(lamp.data[PLAYER_1], pos[i] + 2));
+            if(pinLED[i+5] != 255) gpio_put(pinLED[i+5], tu_bit_test(lamp.data[PLAYER_2], pos[i] + 2));
+        }
     }
 
     // This has a debouncer
@@ -244,6 +280,20 @@ void piuio_task(void) {
 
     // Write the bass neon to the onboard LED for testing + kicks
     gpio_put(pinled, lamp.bass_light | switch_notif);
+
+    if(memcmp(prevLamp.data, lamp.data, sizeof(lamp.data)) != 0 || memcmp(prevInputData, inputData, sizeof(inputData)) != 0) {
+        // There are changes. reset time
+        last_frame_time = now;
+        inactive = 0;
+        inactive_index = 0;
+    }
+    else if(absolute_time_diff_us(last_frame_time, now) >= 5000000 && !inactive) {
+        inactive = 1;
+        last_inactive_demo = now;
+    }
+
+    memcpy(prevLamp.data, lamp.data, sizeof(lamp.data));
+    memcpy(prevInputData, inputData, sizeof(inputData));
 
     #ifdef ENABLE_WS2812_SUPPORT
     ws2812_unlock_mtx();

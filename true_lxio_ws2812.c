@@ -13,14 +13,40 @@ semaphore_t sem;
 
 static struct lampArray* lamp;
 
+uint32_t wheel(uint8_t pos) {
+    pos = 255 - pos;
+    if (pos < 85) {
+        return urgb_u32(255 - pos * 3, 0, pos * 3);
+    }
+    if (pos < 170) {
+        pos -= 85;
+        return urgb_u32(0, pos * 3, 255 - pos * 3);
+    }
+    pos -= 170;
+    return urgb_u32(pos * 3, 255 - pos * 3, 0);
+}
+
+uint8_t offset_color = 0;
+unsigned char inactive = 1;
+
 void ws2812_update() {
-    // Write lamp.data to WS2812Bs
-    put_pixel(lamp->l1_halo ? ws2812_color[0] : urgb_u32(0, 0, 0));
-    put_pixel(lamp->l2_halo ? ws2812_color[1] : urgb_u32(0, 0, 0));
-    for (int i = 0; i < 2; i++)
-        put_pixel(lamp->bass_light ? ws2812_color[2] : urgb_u32(0, 0, 0));
-    put_pixel(lamp->r2_halo ? ws2812_color[3] : urgb_u32(0, 0, 0));
-    put_pixel(lamp->r1_halo ? ws2812_color[4] : urgb_u32(0, 0, 0));
+    if(inactive) {
+        for (int i = 0; i < 6; i++) {
+            put_pixel(wheel(offset_color + i * 20));
+        }
+        offset_color++;
+    }
+    else {
+        // Write lamp.data to WS2812Bs
+        put_pixel(lamp->l1_halo ? ws2812_color[0] : urgb_u32(0, 0, 0));
+        put_pixel(lamp->l2_halo ? ws2812_color[1] : urgb_u32(0, 0, 0));
+        for (int i = 0; i < 2; i++)
+            put_pixel(lamp->bass_light ? ws2812_color[2] : urgb_u32(0, 0, 0));
+        put_pixel(lamp->r2_halo ? ws2812_color[3] : urgb_u32(0, 0, 0));
+        put_pixel(lamp->r1_halo ? ws2812_color[4] : urgb_u32(0, 0, 0));
+    }
+
+    
 }
 
 void ws2812_core1() {
