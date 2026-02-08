@@ -267,7 +267,7 @@ void piuio_task(void) {
 
     // This has a debouncer
     prev_switch = prev_switch << 1;
-    prev_switch |= gpio_get(pinswitchlxio)?1:0;
+    prev_switch |= tu_bit_test(inputData[PLAYER_1], pos[1]) & tu_bit_test(inputData[PLAYER_2], pos[1]) & tu_bit_test(inputData[1], 1);
     prev_switch &= 0xF;
     int cur_switch_state = prev_switch_state;
     if(prev_switch == 0xF) cur_switch_state = 1;
@@ -323,11 +323,7 @@ int main(void) {
         gpio_pull_up(pinSwitch[i]);
     }
 
-    gpio_init(pinswitchlxio);
-    gpio_set_dir(pinswitchlxio, false);
-    gpio_pull_up(pinswitchlxio);
-
-    prev_switch = gpio_get(pinswitchlxio)?1:0;
+    prev_switch = 0;
     for(int i = 1; i < 4; i++) {
         prev_switch |= (prev_switch & 1) << i;
     }
