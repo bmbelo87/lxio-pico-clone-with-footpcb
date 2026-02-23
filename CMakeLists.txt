@@ -7,6 +7,7 @@ project(true_lxio_pico)
 
 option(ENABLE_WS2812_SUPPORT "Enable WS2812 LED support" ON)
 option(WS2812_IS_RGBW "Enable WS2812 for RGBW" OFF)
+option(ENABLE_DEMO "Enable WS2812 RGB demo when not used" ON)
 
 pico_sdk_init()
 
@@ -45,6 +46,10 @@ endif()
 
 if(WS2812_IS_RGBW)
     target_compile_definitions(true_lxio_pico PRIVATE WS2812_IS_RGBW=true)
+endif()
+
+if(ENABLE_DEMO)
+    target_compile_definitions(true_lxio_pico PRIVATE ENABLE_DEMO=1)
 endif()
 
 # Uncomment this line to enable fix for Errata RP2040-E5 (the fix requires use of GPIO 15)

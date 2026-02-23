@@ -28,15 +28,28 @@ uint32_t wheel(uint8_t pos) {
 
 uint8_t offset_color = 0;
 unsigned char inactive = 1;
+unsigned char dev_changed = 0;
+extern unsigned int next_device;
 
 void ws2812_update() {
+    if(dev_changed) {
+        put_pixel(next_device == 0 ? urgb_u32(255, 255, 255) : urgb_u32(0, 0, 0));
+        put_pixel(next_device == 1 ? urgb_u32(255, 255, 255) : urgb_u32(0, 0, 0));
+        put_pixel(next_device == 2 ? urgb_u32(255, 255, 255) : urgb_u32(0, 0, 0));
+        put_pixel(next_device == 3 ? urgb_u32(255, 255, 255) : urgb_u32(0, 0, 0));
+        put_pixel(next_device == 4 ? urgb_u32(255, 255, 255) : urgb_u32(0, 0, 0));
+        put_pixel(next_device == 5 ? urgb_u32(255, 255, 255) : urgb_u32(0, 0, 0));
+    }
+#ifdef ENABLE_DEMO
     if(inactive) {
         for (int i = 0; i < 6; i++) {
             put_pixel(wheel(offset_color + i * 20));
         }
         offset_color++;
     }
-    else {
+    else 
+#endif
+    {
         // Write lamp.data to WS2812Bs
         put_pixel(lamp->l1_halo ? ws2812_color[0] : urgb_u32(0, 0, 0));
         put_pixel(lamp->l2_halo ? ws2812_color[1] : urgb_u32(0, 0, 0));
