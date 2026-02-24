@@ -77,7 +77,7 @@ tusb_desc_device_t const desc_device_lxiov1 =
 
     // Use Interface Association Descriptor (IAD) for CDC
     // As required by USB Specs IAD's subclass must be common class (2) and protocol must be IAD (1)
-    .bDeviceClass       = 0xFF,
+    .bDeviceClass       = 0x00,
     .bDeviceSubClass    = 0x00,
     .bDeviceProtocol    = 0x00,
     .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE, // TODO: Maybe is better to put 8?
@@ -88,7 +88,7 @@ tusb_desc_device_t const desc_device_lxiov1 =
 
     .iManufacturer      = 0x01,
     .iProduct           = 0x02,
-    .iSerialNumber      = 0x03,
+    .iSerialNumber      = 0x00,
 
     .bNumConfigurations = 0x01
 };
@@ -208,14 +208,14 @@ const usbd_class_driver_t _lxio_driver[] = {
 // Implement callback to add our custom driver
 usbd_class_driver_t const *usbd_app_driver_get_cb(uint8_t *driver_count) {
     *driver_count = 1;
-    if(piuio_which_device == 0) return &_piuio_driver;
-    else return &_lxio_driver;
+    if(piuio_which_device == 0) return &_piuio_driver[0];
+    else return &_lxio_driver[0];
 }
 
 const uint8_t * const desc_configurations[] = {
-    &desc_configuration_piuio,
-    &desc_configuration_lxio,
-    &desc_configuration_lxio,
+    desc_configuration_piuio,
+    desc_configuration_lxio,
+    desc_configuration_lxio,
 };
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR
@@ -248,9 +248,9 @@ char const* string_desc_arr_lxio [] =
 };
 
 char const** string_desc_arrs [] = {
-    &string_desc_arr_piuio,
-    &string_desc_arr_lxio,
-    &string_desc_arr_lxio,
+    string_desc_arr_piuio,
+    string_desc_arr_lxio,
+    string_desc_arr_lxio,
 };
 
 const size_t string_desc_arr_sizes [] = {

@@ -11,43 +11,7 @@
 #include "class/hid/hid.h"
 #include "class/hid/hid_device.h"
 
-#ifdef ENABLE_WS2812_SUPPORT
-#include "true_lxio_ws2812.h"
-#endif
-
-#define FLASH_TARGET_OFFSET (512 * 1024) // choosing to start at 512K
-
-// From https://forums.raspberrypi.com/viewtopic.php?t=310821
-struct MyData {
-    int which;
-};
-
-struct MyData myData;
-
-void saveMyData() {
-    uint8_t* myDataAsBytes = (uint8_t*) &myData;
-    int myDataSize = sizeof(myData);
-    
-    int writeSize = (myDataSize / FLASH_PAGE_SIZE) + 1; // how many flash pages we're gonna need to write
-    int sectorCount = ((writeSize * FLASH_PAGE_SIZE) / FLASH_SECTOR_SIZE) + 1; // how many flash sectors we're gonna need to erase
-        
-    printf("Programming flash target region...\n");
-
-    uint32_t interrupts = save_and_disable_interrupts();
-    flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE * sectorCount);
-    flash_range_program(FLASH_TARGET_OFFSET, myDataAsBytes, FLASH_PAGE_SIZE * writeSize);
-    restore_interrupts(interrupts);
-
-    printf("Done.\n");
-}
-
-void readBackMyData() {
-    const uint8_t* flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
-    memcpy(&myData, flash_target_contents, sizeof(myData));
-}
-
-
-const uint8_t pos[] = { 3, 0, 2, 1, 4 }; // don't touch this
+const uint8_t pos[] = { 0, 1, 2, 3, 4 }; // don't touch this
 
 // PIUIO input and output data
 static uint8_t inputData[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -197,11 +161,6 @@ static int prev_switch_state;
 static int switch_notif = 0;
 
 void go_next_device(void) {
-    dev_changed = 1;
-    next_device++;
-    if(next_device >= 3) next_device = 0;
-    myData.which = next_device;
-    saveMyData();
 }
 
 static struct lampArray prevLamp = {};
@@ -255,14 +214,6 @@ void change_dev_task() {
 }
 
 void piuio_task(void) {
-    #ifdef ENABLE_WS2812_SUPPORT
-    ws2812_lock_mtx();
-    #endif
-
-    #ifdef ENABLE_DEMO
-    now = get_absolute_time();
-    #endif
-
     // P1 / P2 inputs
     memset(procInputData, 0xFF, 8);
     for (int i = 0; i < 5; i++) {
@@ -273,73 +224,28 @@ void piuio_task(void) {
     }
 
     // Test/Service buttons
-    if(pinSwitch[10] != 255) procInputData[1] &= ~(((uint8_t) !gpio_get(pinSwitch[10])) << 1); // procInputData[1] = gpio_get(pinSwitch[10]) ? tu_bit_set(procInputData[1], 1) : tu_bit_clear(procInputData[1], 1);
-    if(pinSwitch[11] != 255) procInputData[1] &= ~(((uint8_t) !gpio_get(pinSwitch[11])) << 6); // procInputData[1] = gpio_get(pinSwitch[11]) ? tu_bit_set(procInputData[1], 6) : tu_bit_clear(procInputData[1], 6);
-    if(pinSwitch[12] != 255) procInputData[1] &= ~(((uint8_t) !gpio_get(pinSwitch[12])) << 2); //procInputData[1] = gpio_get(pinSwitch[12]) ? tu_bit_set(procInputData[1], 2) : tu_bit_clear(procInputData[1], 2);
-    if(pinSwitch[13] != 255) procInputData[3] &= ~(((uint8_t) !gpio_get(pinSwitch[13])) << 2); //procInputData[3] = gpio_get(pinSwitch[13]) ? tu_bit_set(procInputData[3], 2) : tu_bit_clear(procInputData[3], 2);
+    // if(pinSwitch[10] != 255) procInputData[1] &= ~(((uint8_t) !gpio_get(pinSwitch[10])) << 1); // procInputData[1] = gpio_get(pinSwitch[10]) ? tu_bit_set(procInputData[1], 1) : tu_bit_clear(procInputData[1], 1);
+    // if(pinSwitch[11] != 255) procInputData[1] &= ~(((uint8_t) !gpio_get(pinSwitch[11])) << 6); // procInputData[1] = gpio_get(pinSwitch[11]) ? tu_bit_set(procInputData[1], 6) : tu_bit_clear(procInputData[1], 6);
+    // if(pinSwitch[12] != 255) procInputData[1] &= ~(((uint8_t) !gpio_get(pinSwitch[12])) << 2); //procInputData[1] = gpio_get(pinSwitch[12]) ? tu_bit_set(procInputData[1], 2) : tu_bit_clear(procInputData[1], 2);
+    // if(pinSwitch[13] != 255) procInputData[3] &= ~(((uint8_t) !gpio_get(pinSwitch[13])) << 2); //procInputData[3] = gpio_get(pinSwitch[13]) ? tu_bit_set(procInputData[3], 2) : tu_bit_clear(procInputData[3], 2);
 
     for(int i =0; i < 8; i++) {
         inputData[i] = procInputData[i];
     }
 
     // Write pad lamps
-#ifdef ENABLE_DEMO
-    if(inactive) {
-        if(absolute_time_diff_us(last_inactive_demo, now) >= 250000) {
-            inactive_index+=2;
-            if(inactive_index >= (sizeof(inactiveLamps)/sizeof(uint8_t))) inactive_index=0;
-            last_inactive_demo = now;
-        }
-        for (int i = 0; i < 5; i++) {
-            if(pinLED[i] != 255) gpio_put(pinLED[i], tu_bit_test(inactiveLamps[inactive_index], pos[i]));
-            if(pinLED[i+5] != 255) gpio_put(pinLED[i+5], tu_bit_test(inactiveLamps[inactive_index+1], pos[i]));
-        }
-    }
-    else 
-#endif
-    {
-        for (int i = 0; i < 5; i++) {
-            if(pinLED[i] != 255) gpio_put(pinLED[i], tu_bit_test(lamp.data[PLAYER_1], pos[i] + 2));
-            if(pinLED[i+5] != 255) gpio_put(pinLED[i+5], tu_bit_test(lamp.data[PLAYER_2], pos[i] + 2));
-        }
+
+    for (int i = 0; i < 5; i++) {
+        if(pinLED[i] != 255) gpio_put(pinLED[i], !tu_bit_test(lamp.data[PLAYER_1], pos[i] + 2));
+        if(pinLED[i+5] != 255) gpio_put(pinLED[i+5], !tu_bit_test(lamp.data[PLAYER_2], pos[i] + 2));
     }
 
     // Write the bass neon to the onboard LED for testing + kicks
     gpio_put(pinled, lamp.bass_light | switch_notif);
-
-#ifdef ENABLE_DEMO
-    if(memcmp(prevLamp.data, lamp.data, sizeof(lamp.data)) != 0 || memcmp(prevInputData, inputData, sizeof(inputData)) != 0) {
-        // There are changes. reset time
-        last_frame_time = now;
-        inactive = 0;
-        inactive_index = 0;
-    }
-    else if(absolute_time_diff_us(last_frame_time, now) >= 10000000 && !inactive) {
-        inactive = 1;
-        last_inactive_demo = now;
-    }
-
-    memcpy(prevLamp.data, lamp.data, sizeof(lamp.data));
-    memcpy(prevInputData, inputData, sizeof(inputData));
-#endif 
-
-    #ifdef ENABLE_WS2812_SUPPORT
-    ws2812_unlock_mtx();
-    #endif
 }
 
 int main(void) {
     board_init();
-    readBackMyData();
-
-    piuio_which_device = (int)myData.which;
-    if(piuio_which_device < 0 || piuio_which_device > 2) piuio_which_device = 1;
-    next_device = piuio_which_device;
-
-    // Init WS2812B
-    #ifdef ENABLE_WS2812_SUPPORT
-    ws2812_init(&lamp);
-    #endif
 
     // Set up GPIO pins: Inputs first, then outputs
     for (int i = 0; i < (sizeof(pinSwitch)/sizeof(pinSwitch[0])); i++) if(pinSwitch[i] != 255) {
