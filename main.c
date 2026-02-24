@@ -10,6 +10,12 @@
 #include "hardware/sync.h"
 #include "class/hid/hid.h"
 #include "class/hid/hid_device.h"
+#include "hardware/uart.h"
+
+#define UART_ID uart0
+#define UART_TX_PIN 12
+#define UART_RX_PIN 13
+#define BAUD_RATE 115200
 
 const uint8_t pos[] = { 0, 1, 2, 3, 4 }; // don't touch this
 
@@ -35,6 +41,12 @@ bool tud_vendor_control_xfer_cb_piuio(uint8_t rhport, uint8_t stage, tusb_contro
     }
 
     return false;
+}
+
+void setup_uart() {
+    uart_init(UART_ID, BAUD_RATE); // Configure UART
+    gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART); // TX
+    gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART); // RX
 }
 
 bool tud_vendor_control_xfer_cb_lxio(uint8_t rhport, uint8_t stage, tusb_control_request_t const * request) {
@@ -240,12 +252,46 @@ void piuio_task(void) {
         if(pinLED[i+5] != 255) gpio_put(pinLED[i+5], !tu_bit_test(lamp.data[PLAYER_2], pos[i] + 2));
     }
 
-    // Write the bass neon to the onboard LED for testing + kicks
-    gpio_put(pinled, lamp.bass_light | switch_notif);
+    // 5. Recebe os dados de Coin, Test e Service via UART0
+    if (uart_is_readable(UART_ID)) {
+        uint8_t received = uart_getc(UART_ID);
+
+        // Acende LED da Pico A quando receber botão pressionado via UART
+        bool any_pressed = false;
+
+        if (!(received & (1 << 1))) {
+            inputData[CABINET] &= ~(1 << 1);
+            any_pressed = true;
+            sleep_ms(2);
+        }
+        
+        if (!(received & (1 << 2))) {
+            inputData[CABINET] &= ~(1 << 2);
+            any_pressed = true;
+            sleep_ms(2);
+        }
+        
+        if (!(received & (1 << 6))) {
+            inputData[CABINET] &= ~(1 << 6);
+            any_pressed = true;
+            sleep_ms(2);
+        }
+
+        if (!(received & (1 << 7))) {
+            inputData[CABINET] &= ~(1 << 7);
+            any_pressed = true;
+            sleep_ms(2);
+        }
+
+        gpio_put(pinled, any_pressed ? 1 : 0);
+
+    }
 }
 
 int main(void) {
     board_init();
+
+    setup_uart();
 
     // Set up GPIO pins: Inputs first, then outputs
     for (int i = 0; i < (sizeof(pinSwitch)/sizeof(pinSwitch[0])); i++) if(pinSwitch[i] != 255) {
