@@ -44,7 +44,4 @@ static const uint8_t pinNXP2[2] = {
         15      // INX1
 };
 
-// Map this to the switch to change between PIUIO and LXIO
-static const uint8_t pinled = 25;
-
 #endif //TRUE_LXIO_PICO_PIUIO_CONFIG_H
