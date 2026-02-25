@@ -19,6 +19,8 @@
 
 const uint8_t pos[] = { 0, 1, 2, 3, 4 }; // don't touch this
 
+uint8_t all_states[4][2]; // [mux][player]
+
 // PIUIO input and output data
 static uint8_t inputData[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 static uint8_t procInputData[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -28,6 +30,7 @@ uint8_t LXInputData[16] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 uint8_t LXLampData[16] = {};
 
 bool tud_vendor_control_xfer_cb_piuio(uint8_t rhport, uint8_t stage, tusb_control_request_t const * request) {
+
     // Request 0xAE = IO Time
     if (request->bRequest == 0xAE) {
         switch (request->bmRequestType) {
@@ -57,52 +60,15 @@ bool tud_vendor_control_xfer_cb_lxio(uint8_t rhport, uint8_t stage, tusb_control
 bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_request_t const * request) {
     // nothing to with DATA & ACK stage
     if (stage != CONTROL_STAGE_SETUP) return true;
-
-    if (piuio_which_device == 0) 
-        return tud_vendor_control_xfer_cb_piuio(rhport, stage, request);
-    
-    else
-        return tud_vendor_control_xfer_cb_lxio(rhport, stage, request);
+    return tud_vendor_control_xfer_cb_lxio(rhport, stage, request);
 }
 
-void handle_lxio_data() {
-    // Do the conversion from the Lights and Input from regular IO
-    // to the LX Lights and Input format
-    // NOTE: Note that InputData will carry the 4 sensor anyways
-//#define PIUIO_BUTTON
-#ifndef PIUIO_BUTTON
-    LXInputData[0] = inputData[0];
-    LXInputData[1] = inputData[0];
-    LXInputData[2] = inputData[0];
-    LXInputData[3] = inputData[0];
-    LXInputData[4] = inputData[2];
-    LXInputData[5] = inputData[2];
-    LXInputData[6] = inputData[2];
-    LXInputData[7] = inputData[2];
-    LXInputData[8] = inputData[1];
-    LXInputData[9] = inputData[3];
-    LXInputData[10] = 0xFF;
-    LXInputData[11] = 0xFF;
-    LXInputData[14] = 0xFF;
-    LXInputData[15] = 0xFF;
-#else
-    LXInputData[0] = 0xFF;
-    LXInputData[1] = 0xFF;
-    LXInputData[2] = 0xFF;
-    LXInputData[3] = 0xFF;
-    LXInputData[4] = 0xFF;
-    LXInputData[5] = 0xFF;
-    LXInputData[6] = 0xFF;
-    LXInputData[7] = 0xFF;
-    LXInputData[8] = inputData[1];
-    LXInputData[9] = inputData[3];
-    LXInputData[10] = inputData[0];
-    LXInputData[11] = inputData[2];
-    LXInputData[14] = 0xFF;
-    LXInputData[15] = 0xFF;
-#endif
+void handle_lxio_data()
+{
+    // NÃO sobrescrever LXInputData aqui
+    // Apenas atualizar os lamps vindos do jogo
 
-    memcpy(lamp.data, LXLampData, 8); // Just copy in the case of lamps
+    memcpy(lamp.data, LXLampData, 8);
 }
 
 void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize) {
@@ -156,163 +122,116 @@ uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t
 }
 
 void hid_task(void) {
-  if(piuio_which_device == 0) return; // Dont do this on PIUIO
-  // Just do the sendings
+    // Variável para guardar o último envio
+    static uint32_t last_time_us = 0;
+    
+    // Limita o envio para não travar a porta USB (1000 microsegundos = 1ms)
+    if (time_us_32() - last_time_us < 1000) return;
 
-  if ( tud_hid_n_ready(0) )
-  {
-    handle_lxio_data();
-    tud_hid_n_report(0, 0, LXInputData, 16);
-  }
-}
-
-
-int next_device = 0;
-static int prev_switch;
-static int prev_switch_state;
-static int switch_notif = 0;
-
-void go_next_device(void) {
-}
-
-static struct lampArray prevLamp = {};
-static uint8_t prevInputData [] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-static absolute_time_t last_frame_time;
-static absolute_time_t last_inactive_demo;
-static absolute_time_t now;
-static int inactive_index = 0;
-
-const uint8_t inactiveLamps [] = {
-    0x01, 0x01,
-    0x02, 0x02,
-    0x04, 0x04,
-    0x08, 0x08,
-    0x10, 0x10,
-    0x00, 0x00,
-    0x02, 0x02,
-    0x01, 0x01,
-    0x04, 0x04,
-    0x10, 0x10,
-    0x08, 0x08,
-    0x00, 0x00,
-    0x1F, 0x1F,
-    0x1F, 0x1F,
-    0x00, 0x00,
-};
-
-void change_dev_task() {
-    // This has a debouncer
-    volatile uint32_t* a = (uint32_t*)inputData;
-    int this_switch = (*a) == 0xFFFEFDFE ? 1 : 0;
-    //int this_switch = 0;
-    //if(!(inputData[PLAYER_1] & (1 << pos[1]))) this_switch = 0;
-    //if(!(inputData[PLAYER_2] & (1 << pos[1]))) this_switch = 0;
-    //if(!(inputData[1] & (1 << 1))) this_switch = 0;
-
-    prev_switch = prev_switch << 1;
-    prev_switch |= this_switch;
-    prev_switch &= 0xF;
-    int cur_switch_state = prev_switch_state;
-    if(prev_switch == 0xF) cur_switch_state = 1;
-    else if(prev_switch == 0x0) cur_switch_state = 0;
-    if(prev_switch_state != cur_switch_state && !cur_switch_state) {
-        go_next_device();
-        switch_notif = 1;
-    }
-    if(prev_switch_state != cur_switch_state && cur_switch_state) {
-        switch_notif = 0;
-    }
-    prev_switch_state = cur_switch_state;
-}
-
-void piuio_task(void) {
-    // P1 / P2 inputs
-    memset(procInputData, 0xFF, 8);
-    for (int i = 0; i < 5; i++) {
-        uint8_t* p1 = &procInputData[PLAYER_1];
-        uint8_t* p2 = &procInputData[PLAYER_2];
-        if(pinSwitch[i] != 255) *p1 &= ~(((uint8_t) !gpio_get(pinSwitch[i])) << pos[i]); //*p1 =  ? tu_bit_set(*p1, pos[i]) : tu_bit_clear(*p1, pos[i]);
-        if(pinSwitch[i+5] != 255) *p2 &= ~(((uint8_t) !gpio_get(pinSwitch[i+5])) << pos[i]); // *p2 = gpio_get(pinSwitch[i+5]) ? tu_bit_set(*p2, pos[i]) : tu_bit_clear(*p2, pos[i]);
-    }
-
-    // Test/Service buttons
-    // if(pinSwitch[10] != 255) procInputData[1] &= ~(((uint8_t) !gpio_get(pinSwitch[10])) << 1); // procInputData[1] = gpio_get(pinSwitch[10]) ? tu_bit_set(procInputData[1], 1) : tu_bit_clear(procInputData[1], 1);
-    // if(pinSwitch[11] != 255) procInputData[1] &= ~(((uint8_t) !gpio_get(pinSwitch[11])) << 6); // procInputData[1] = gpio_get(pinSwitch[11]) ? tu_bit_set(procInputData[1], 6) : tu_bit_clear(procInputData[1], 6);
-    // if(pinSwitch[12] != 255) procInputData[1] &= ~(((uint8_t) !gpio_get(pinSwitch[12])) << 2); //procInputData[1] = gpio_get(pinSwitch[12]) ? tu_bit_set(procInputData[1], 2) : tu_bit_clear(procInputData[1], 2);
-    // if(pinSwitch[13] != 255) procInputData[3] &= ~(((uint8_t) !gpio_get(pinSwitch[13])) << 2); //procInputData[3] = gpio_get(pinSwitch[13]) ? tu_bit_set(procInputData[3], 2) : tu_bit_clear(procInputData[3], 2);
-
-    for(int i =0; i < 8; i++) {
-        inputData[i] = procInputData[i];
-    }
-
-    // Write pad lamps
-
-    for (int i = 0; i < 5; i++) {
-        if(pinLED[i] != 255) gpio_put(pinLED[i], !tu_bit_test(lamp.data[PLAYER_1], pos[i] + 2));
-        if(pinLED[i+5] != 255) gpio_put(pinLED[i+5], !tu_bit_test(lamp.data[PLAYER_2], pos[i] + 2));
-    }
-
-    // 5. Recebe os dados de Coin, Test e Service via UART0
-    if (uart_is_readable(UART_ID)) {
-        uint8_t received = uart_getc(UART_ID);
-
-        // Acende LED da Pico A quando receber botão pressionado via UART
-        bool any_pressed = false;
-
-        if (!(received & (1 << 1))) {
-            inputData[CABINET] &= ~(1 << 1);
-            any_pressed = true;
-            sleep_ms(2);
-        }
-        
-        if (!(received & (1 << 2))) {
-            inputData[CABINET] &= ~(1 << 2);
-            any_pressed = true;
-            sleep_ms(2);
-        }
-        
-        if (!(received & (1 << 6))) {
-            inputData[CABINET] &= ~(1 << 6);
-            any_pressed = true;
-            sleep_ms(2);
-        }
-
-        if (!(received & (1 << 7))) {
-            inputData[CABINET] &= ~(1 << 7);
-            any_pressed = true;
-            sleep_ms(2);
-        }
-
-        gpio_put(pinled, any_pressed ? 1 : 0);
-
+    if ( tud_hid_n_ready(0) )
+    {
+        tud_hid_n_report(0, 0, LXInputData, 16);
+        last_time_us = time_us_32();
     }
 }
+
+void piuio_task(void)
+{
+    // --------------------------------------------------
+    // 1. Ler os 4 estados do mux
+    // --------------------------------------------------
+
+// Ler o canal do multiplexador solicitado pelo jogo
+uint8_t current_mux1 = LXLampData[0] & 0x03;
+uint8_t current_mux2 = LXLampData[2] & 0x03;
+
+// Selecionar o mux para ambos os players
+gpio_put(pinNXP1[0], current_mux1 & 1);
+gpio_put(pinNXP1[1], (current_mux1 >> 1) & 1);
+
+gpio_put(pinNXP2[0], current_mux2 & 1);
+gpio_put(pinNXP2[1], (current_mux2 >> 1) & 1);
+
+sleep_us(20);
+
+uint8_t stateP1 = 0xFF;
+uint8_t stateP2 = 0xFF;
+
+for (int btn = 0; btn < 5; btn++) {
+    if (!gpio_get(pinSwitch[btn]))
+        stateP1 &= ~(1 << pos[btn]);
+
+    if (!gpio_get(pinSwitch[btn + 5]))
+        stateP2 &= ~(1 << pos[btn]);
+}
+
+// Escrever diretamente no buffer correto para os dois players
+LXInputData[current_mux1] = stateP1;
+LXInputData[4 + current_mux2] = stateP2;
+
+}
+
+    // 5. Recebe os dados de Coin, CoinClear, Test e Service via UART0
+    // static uint8_t last_received = 0xFF;
+
+    // if (uart_is_readable(UART_ID)) {
+    //     last_received = uart_getc(UART_ID);
+    // }
+
+    // uint8_t cabinet_state = 0xFF;
+
+    // if (!(last_received & (1 << 1))) 
+    //     cabinet_state &= ~(1 << 1); // Service button
+    
+    // if (!(last_received & (1 << 2))) 
+    //     cabinet_state &= ~(1 << 2); // Test button
+
+    // if (!(last_received & (1 << 6))) 
+    //     cabinet_state &= ~(1 << 6); // CoinClear input
+
+    // if (!(last_received & (1 << 7))) 
+    //     cabinet_state &= ~(1 << 7); // Coin input
+
+    // inputData[CABINET] = cabinet_state;
+    
+    // gpio_put(25, cabinet_state != 0xFF);
+
+
 
 int main(void) {
     board_init();
 
-    setup_uart();
+    // setup_uart();
 
     // Set up GPIO pins: Inputs first, then outputs
-    for (int i = 0; i < (sizeof(pinSwitch)/sizeof(pinSwitch[0])); i++) if(pinSwitch[i] != 255) {
+    for (int i = 0; i < 10; i++) {
         gpio_init(pinSwitch[i]);
         gpio_set_dir(pinSwitch[i], false);
         gpio_pull_up(pinSwitch[i]);
     }
 
-    prev_switch = 0;
-    for(int i = 1; i < 4; i++) {
-        prev_switch |= (prev_switch & 1) << i;
-    }
-    prev_switch_state = prev_switch == 0xF?1:0;
-
-    for (int i = 0; i < (sizeof(pinLED)/sizeof(pinLED[0])); i++) if(pinLED[i] != 255) {
+    for (int i = 0; i < 10; i++) {
         gpio_init(pinLED[i]);
         gpio_set_dir(pinLED[i], true);
     }
 
     gpio_init(pinled);
     gpio_set_dir(pinled, true);
+
+    
+    // MUX PLAYER 1
+    gpio_init(pinNXP1[0]);
+    gpio_set_dir(pinNXP1[0], GPIO_OUT);
+
+    gpio_init(pinNXP1[1]);
+    gpio_set_dir(pinNXP1[1], GPIO_OUT);
+
+    // MUX PLAYER 2
+    gpio_init(pinNXP2[0]);
+    gpio_set_dir(pinNXP2[0], GPIO_OUT);
+
+    gpio_init(pinNXP2[1]);
+    gpio_set_dir(pinNXP2[1], GPIO_OUT);
 
     // init device stack on configured roothub port
     const tusb_rhport_init_t rh_init = {
@@ -325,7 +244,6 @@ int main(void) {
     while (true) {
         tud_task(); // tinyusb device task
         piuio_task();
-        change_dev_task();
         hid_task();
     }
 
