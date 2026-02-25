@@ -13,8 +13,8 @@ You don't need many components to put one together:
  - 12x switches (for the 10 pad switches, plus test and service buttons)
  - 10x LEDs and appropriate resistors
 
-By default the pins are configured as shown below, but the pins can be changed in `piuio_config.h`.
-![Schematic](Schematic.png)
+Pins configured in `piuio_config.h`.
+
 
 ## Firmware Setup
 [See the Pi Pico SDK repo](https://github.com/raspberrypi/pico-sdk) for instructions on preparing the build environment. All the required CMake files should already be present and ready for compilation.
