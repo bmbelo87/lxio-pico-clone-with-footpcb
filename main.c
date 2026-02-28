@@ -133,14 +133,14 @@ void piuio_task(void)
         // duplicate for player 2 mux since original PCB has separate muxes for player 1 and player 2
         gpio_put(pinNXP2[1], mux_pos & 1);
         gpio_put(pinNXP2[0], (mux_pos >> 1) & 1);
-        // small delay to allow mux to switch (Pooling Hate 1000Hz, so 1ms delay should be fine)
+        // small delay to allow mux to switch (Pooling rate 1000Hz, so 1ms delay should be fine)
         sleep_ms(1);
         // read inputs for current mux position and player states
         uint8_t stateP1 = 0xFF;
         uint8_t stateP2 = 0xFF;
 
         // Loop through the 5 inputs for player 1 and player 2. If pressed, set the corresponding bit to 0 (active low)
-        // and save the state in the all_states buffer according to the current mux position. 
+        // and save the state in the all_states buffer according to the current mux position.
         // This way we can keep track of the state of all 4 mux positions for both players, even though we're only reading one at a time.
         for (int i = 0; i < 5; i++)
         {
@@ -149,14 +149,14 @@ void piuio_task(void)
                 if (mux_pos == 0) stateP1 &= ~(1 << pos[i]);
                 else if (mux_pos == 1) stateP1 &= ~(1 << pos[i]);
                 else if (mux_pos == 2) stateP1 &= ~(1 << pos[i]);
-                else if (mux_pos == 3) stateP1 &= ~(1 << pos[i]); 
+                else if (mux_pos == 3) stateP1 &= ~(1 << pos[i]);
             }
             pressed = !gpio_get(pinSwitch[i+5]);
             if (pressed) {
                 if (mux_pos == 0) stateP2 &= ~(1 << pos[i]);
                 else if (mux_pos == 1) stateP2 &= ~(1 << pos[i]);
                 else if (mux_pos == 2) stateP2 &= ~(1 << pos[i]);
-                else if (mux_pos == 3) stateP2 &= ~(1 << pos[i]); 
+                else if (mux_pos == 3) stateP2 &= ~(1 << pos[i]);
             }
         }
 
@@ -170,7 +170,7 @@ void piuio_task(void)
         all_states_p2[mux_pos][PLAYER_2] = stateP2;
         LXInputData[4] = all_states_p2[0][PLAYER_2];
         LXInputData[5] = all_states_p2[1][PLAYER_2];
-        LXInputData[6] = all_states_p2[2][PLAYER_2];   
+        LXInputData[6] = all_states_p2[2][PLAYER_2];
         LXInputData[7] = all_states_p2[3][PLAYER_2];
         // increment mux position for next loop
         mux_pos++;
@@ -179,13 +179,13 @@ void piuio_task(void)
 
     // Write Pad lamps
         for (int i = 0; i < 5; i++) {
-            if(pinLED[i] != 255) 
+            if(pinLED[i] != 255)
                 gpio_put(pinLED[i], tu_bit_test(lamp.data[PLAYER_1], pos[i] + 2));
-            if(pinLED[i+5] != 255) 
+            if(pinLED[i+5] != 255)
                 gpio_put(pinLED[i+5], tu_bit_test(lamp.data[PLAYER_2], pos[i] + 2));
     }
 
-    
+
 
 }
 
