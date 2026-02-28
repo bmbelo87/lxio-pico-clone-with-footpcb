@@ -23,12 +23,6 @@ void setup_uart() {
 }
 
 //--------------------------------------------------------------------
-// Constants
-//--------------------------------------------------------------------
-
-const uint8_t pos[] = { 0, 1, 2, 3, 4 };
-
-//--------------------------------------------------------------------
 // LXIO buffers
 //--------------------------------------------------------------------
 
@@ -146,17 +140,17 @@ void piuio_task(void)
         {
             bool pressed = !gpio_get(pinSwitch[i]);
             if (pressed) {
-                if (mux_pos == 0) stateP1 &= ~(1 << pos[i]);
-                else if (mux_pos == 1) stateP1 &= ~(1 << pos[i]);
-                else if (mux_pos == 2) stateP1 &= ~(1 << pos[i]);
-                else if (mux_pos == 3) stateP1 &= ~(1 << pos[i]);
+                if (mux_pos == 0) stateP1 &= ~(1 << i);
+                else if (mux_pos == 1) stateP1 &= ~(1 << i);
+                else if (mux_pos == 2) stateP1 &= ~(1 << i);
+                else if (mux_pos == 3) stateP1 &= ~(1 << i);
             }
             pressed = !gpio_get(pinSwitch[i+5]);
             if (pressed) {
-                if (mux_pos == 0) stateP2 &= ~(1 << pos[i]);
-                else if (mux_pos == 1) stateP2 &= ~(1 << pos[i]);
-                else if (mux_pos == 2) stateP2 &= ~(1 << pos[i]);
-                else if (mux_pos == 3) stateP2 &= ~(1 << pos[i]);
+                if (mux_pos == 0) stateP2 &= ~(1 << i);
+                else if (mux_pos == 1) stateP2 &= ~(1 << i);
+                else if (mux_pos == 2) stateP2 &= ~(1 << i);
+                else if (mux_pos == 3) stateP2 &= ~(1 << i);
             }
         }
 
@@ -180,9 +174,9 @@ void piuio_task(void)
     // Write Pad lamps
         for (int i = 0; i < 5; i++) {
             if(pinLED[i] != 255)
-                gpio_put(pinLED[i], tu_bit_test(lamp.data[PLAYER_1], pos[i] + 2));
+                gpio_put(pinLED[i], tu_bit_test(lamp.data[PLAYER_1], i + 2));
             if(pinLED[i+5] != 255)
-                gpio_put(pinLED[i+5], tu_bit_test(lamp.data[PLAYER_2], pos[i] + 2));
+                gpio_put(pinLED[i+5], tu_bit_test(lamp.data[PLAYER_2], i + 2));
     }
 
 
