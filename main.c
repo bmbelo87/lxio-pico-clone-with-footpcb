@@ -20,6 +20,7 @@ void setup_uart() {
     uart_init(UART_ID, BAUD_RATE); // Configure UART
     gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART); // TX
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART); // RX
+    gpio_pull_up(UART_RX_PIN); // idle high, avoids phantom bytes if the cabinet Pico is not connected
 }
 
 //--------------------------------------------------------------------
@@ -179,12 +180,32 @@ void piuio_task(void)
     // select the next position now; it is read on the next tick
     set_mux(mux_pos);
 
-    // Write pad lamps
+    // Write pad lamps (LEDs on this board are active-low: GPIO low = lit)
     for (uint8_t i = 0; i < INPUTS_PER_PLAYER; i++) {
         if(pinLED[i] != 255)
-            gpio_put(pinLED[i], tu_bit_test(lamp.data[PLAYER_1], i + 2));
+            gpio_put(pinLED[i], !tu_bit_test(lamp.data[PLAYER_1], i + 2));
         if(pinLED[i+5] != 255)
-            gpio_put(pinLED[i+5], tu_bit_test(lamp.data[PLAYER_2], i + 2));
+            gpio_put(pinLED[i+5], !tu_bit_test(lamp.data[PLAYER_2], i + 2));
+    }
+
+    // Cabinet Pico (cabnetio-pico) over UART.
+    // Receive: active-low byte (Test bit1, Coin bit2, Service bit6, Clear bit7) = LXIO cab0 layout.
+    // Keep only the most recent byte; the cabinet sends one every 1ms.
+    static uint8_t cab_inputs = 0xFF;
+    while (uart_is_readable(UART_ID)) {
+        cab_inputs = uart_getc(UART_ID);
+    }
+    LXInputData[8] = cab_inputs;
+
+    // Send: halos + neon, active-high (bit0 R2, bit1 R1, bit2 L2, bit3 L1, bit4 bass/neon).
+    uint8_t cab_lights = 0;
+    cab_lights |= (lamp.r2_halo    << 0);
+    cab_lights |= (lamp.r1_halo    << 1);
+    cab_lights |= (lamp.l2_halo    << 2);
+    cab_lights |= (lamp.l1_halo    << 3);
+    cab_lights |= (lamp.bass_light << 4);
+    if (uart_is_writable(UART_ID)) {
+        uart_putc_raw(UART_ID, cab_lights);
     }
 }
 
@@ -196,6 +217,7 @@ void piuio_task(void)
 int main(void)
 {
     board_init();
+    setup_uart();
     //---------------- GPIO INPUT ----------------
 
     // Initialize switch pins as inputs with pull-ups
