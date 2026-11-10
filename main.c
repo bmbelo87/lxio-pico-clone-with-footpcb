@@ -108,19 +108,31 @@ uint8_t mux_pos = 0; // 0-3, corresponds to the 4 mux positions on the original 
 uint8_t all_states[4][1]; // mux position, player state. Only 1 byte per player since the original PCB only has 8 inputs per player, but this can be expanded if needed.
 uint8_t all_states_p2[4][1]; // same as above but for player 2, since the original PCB has a separate mux for player 2
 
-void piuio_task(void)
+// One mux position per 1ms tick (Fusion: TIMER1_COUNT = 1000Hz).
+// Fusion waits only 100us (SENSOR_MUX_DELAY) after setting the mux, but that was too short on this
+// board (ghosting between sensors: weak internal pull-ups + pad cable capacitance). So instead we
+// set the mux on one tick and read it on the NEXT tick: 1ms to settle, without blocking the loop.
+#define MUX_POLL_INTERVAL_US 1000
+
+static void set_mux(uint8_t pos)
 {
-    // set mux position
-    gpio_put(pinNXP1[1], mux_pos & 1);
-    gpio_put(pinNXP1[0], (mux_pos >> 1) & 1);
+    gpio_put(pinNXP1[1], pos & 1);
+    gpio_put(pinNXP1[0], (pos >> 1) & 1);
 
     // duplicate for player 2 mux since original PCB has separate muxes for player 1 and player 2
-    gpio_put(pinNXP2[1], mux_pos & 1);
-    gpio_put(pinNXP2[0], (mux_pos >> 1) & 1);
+    gpio_put(pinNXP2[1], pos & 1);
+    gpio_put(pinNXP2[0], (pos >> 1) & 1);
+}
 
-    // small delay to allow mux to switch (polling rate 1000Hz, so 1ms delay should be fine)
-    sleep_ms(1);
+void piuio_task(void)
+{
+    // Non-blocking 1ms tick: don't stall tud_task()/hid_task() while waiting for the next poll.
+    static uint64_t next_poll_us = 0;
+    uint64_t now = time_us_64();
+    if (now < next_poll_us) return;
+    next_poll_us = now + MUX_POLL_INTERVAL_US;
 
+    // The mux was set to mux_pos on the previous tick, so it has had ~1ms to settle.
     // read inputs for current mux position and player states
     uint8_t stateP1 = 0xFF;
     uint8_t stateP2 = 0xFF;
@@ -163,6 +175,9 @@ void piuio_task(void)
     mux_pos++;
     // wrap around mux position if it exceeds 3 (since we only have 4 mux positions: 0, 1, 2, 3)
     mux_pos &= 3;
+
+    // select the next position now; it is read on the next tick
+    set_mux(mux_pos);
 
     // Write pad lamps
     for (uint8_t i = 0; i < INPUTS_PER_PLAYER; i++) {
